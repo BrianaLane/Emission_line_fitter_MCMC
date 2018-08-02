@@ -49,9 +49,6 @@ wl_sol = wl_sol[inds]
 residuals = np.subtract(newgal, galfit)
 dat       = np.add(gasfit, residuals)
 
-plt.plot(wl_sol, dat[0][0])
-plt.show()
-
 thetaGuess = [z, 4, 4]
 ndim, nwalkers = len(thetaGuess), 100
 args=(wl_sol, dat[0][0], np.std(residuals[0][0])**2)
@@ -63,9 +60,9 @@ print mc_results
 z_mc, sig_mc, inten_mc = mc_results 
 
 plt.plot(wl_sol, dat[0][0])
-plt.plot(wl_sol, mlf.OIII_doub_gaussian(wl_sol, z_mc[0], sig_mc[0], inten_mc[0]), color='red')
-plt.plot(wl_sol, mlf.OIII_doub_gaussian(wl_sol, z_mc[0]+z_mc[1], sig_mc[0]+sig_mc[1], inten_mc[0]+inten_mc[1]), color='red', ls=':')
-plt.plot(wl_sol, mlf.OIII_doub_gaussian(wl_sol, z_mc[0]-z_mc[2], sig_mc[0]-sig_mc[2], inten_mc[0]-inten_mc[2]), color='red', ls=':')
+plt.plot(wl_sol, mlf.OIII_doub_gaussian(wl_sol, theta = (z_mc[0], sig_mc[0], inten_mc[0])), color='red')
+plt.plot(wl_sol, mlf.OIII_doub_gaussian(wl_sol, theta = (z_mc[0]+z_mc[1], sig_mc[0]+sig_mc[1], inten_mc[0]+inten_mc[1])), color='red', ls=':')
+plt.plot(wl_sol, mlf.OIII_doub_gaussian(wl_sol, theta = (z_mc[0]-z_mc[2], sig_mc[0]-sig_mc[2], inten_mc[0]-inten_mc[2])), color='red', ls=':')
 plt.show()
 
 

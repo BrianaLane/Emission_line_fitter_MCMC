@@ -4,7 +4,7 @@ import math
 import os
 import model_line_functions as mlf
 
-# class MCMC_functions(model, model_args, model_bounds):
+# class MCMC_functions(model, model_bounds):
 # 	def __init__(self):
 # 		self.model = model
 # 		self.model_args = model_args
@@ -12,8 +12,7 @@ import model_line_functions as mlf
 
 #define the log likelihood function
 def lnlike(theta, x, y, yerr):
-	z, sig, inten = theta
-	mod = mlf.OIII_doub_gaussian(x, z, sig, inten)
+	mod = mlf.OIII_doub_gaussian(x, theta)
 	return -0.5*sum(((y - mod)**2)/(yerr**2))
 
 #define the log prior function
