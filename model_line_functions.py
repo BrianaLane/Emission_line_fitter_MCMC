@@ -33,18 +33,16 @@ def SII_doub_gaussian(x, theta):
 #fit the OIII doublet and fixes the ratio to 2.89. Also fits Hb which is blueward of the doublet 
 def OIII_Hb_trip_gaussian(x, theta):
 	z, sig, inten1, inten2 = theta
-	ratio =  1.0/line_ratios[line]
 	mu1 = 5007*(1+z)
 	mu2 = 4939*(1+z)
 	mu3 = 4861*(1+z)
 	return ( inten1 * (np.exp(-0.5*np.power(x - mu1, 2.) / (np.power(sig, 2.))))) + \
-		((inten1/ratio) * (np.exp(-0.5*np.power(x - mu2, 2.) / (np.power(sig, 2.))))) + \
+		((inten1/2.98) * (np.exp(-0.5*np.power(x - mu2, 2.) / (np.power(sig, 2.))))) + \
 		(inten2 * (np.exp(-0.5*np.power(x - mu3, 2.) / (np.power(sig, 2.)))))
 
 #fit the NII doublet and fixes the ratio to 2.5 and also fits Ha which is between the lines 
 def NII_Ha_trip_gaussian(x, theta):
 	z, sig, inten1, inten2 = theta
-	ratio =  1.0/line_ratios[line]
 	mu1 = 6583*(1+z)
 	mu2 = 6562*(1+z)
 	mu3 = 6549*(1+z)
