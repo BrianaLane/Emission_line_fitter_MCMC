@@ -51,6 +51,26 @@ def NII_Ha_trip_gaussian(x, theta):
 		((inten1/2.5) * (np.exp(-0.5*np.power(x - mu3, 2.) / (np.power(sig, 2.)))))
 
 #********************#
+# Trim Spec Function #
+#********************#
+
+wl_trim_dict = {'OII':(3700.0, 3760.0),
+				'Hb': (4830.0, 4890.0),
+				'OIII_doub': (4930.0, 5050.0),
+				'SII_doub': (6700.0, 6750.0),
+				'OIII_Hb_trip': (4830.0, 5050.0),
+				'NII_Ha_trip': (6520.0, 6610.0)}
+
+def trim_spec_for_model(line, dat, residuals, wl):
+	inds = np.where((wl_trim_dict[line][0] < wl) & (wl < wl_trim_dict[line][1]))
+
+	dat       = dat[:, inds]
+	residuals = residuals[:, inds]
+	wl = wl[inds]
+
+	return dat, residuals, wl
+
+#********************#
 # Analysis Functions #
 #********************#
 
