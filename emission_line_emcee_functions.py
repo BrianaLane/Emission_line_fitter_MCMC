@@ -1,13 +1,18 @@
 import numpy as np
 import emcee
 import math
+import string as st
 import os
+import pandas as pd
 from scipy.integrate import quad
 import matplotlib.pyplot as plt
 import model_line_functions as mlf
 
 class MCMC_functions():
-	def __init__(self, model, model_bounds, args):
+	def __init__(self, num, lines, model, model_bounds, args):
+		self.num = num
+		self.lines = lines
+		self.wl_lines = [int(st.split(w, ']')[1]) for w in lines]
 		self.model = model
 		self.model_bounds = model_bounds
 		self.args = args
@@ -102,17 +107,26 @@ class MCMC_functions():
 		plt.plot(wl_sol, self.model(wl_sol, theta = up_lim_theta), color='red', ls=':')
 		plt.plot(wl_sol, self.model(wl_sol, theta = lo_lim_theta), color='red', ls=':')
 
-		plt.text(0.05,0.82,'flux1 '+str(round(self.flux[0],2))+'+/-'+str(round(self.flux_err[0],2)), 
+		plt.text(0.05,0.82,'flux '+str(self.lines[0])+': '+str(round(self.flux[0],2))+'+/-'+str(round(self.flux_err[0],2)), 
 			transform = ax.transAxes, color='navy',size='medium', bbox=dict(facecolor='none', edgecolor='navy', pad=10.0))
 		if len(sol)>3:
-			plt.text(0.05,0.72,'flux2 '+str(round(self.flux[1],2))+'+/-'+str(round(self.flux_err[1],2)), 
+			plt.text(0.05,0.72,'flux '+str(self.lines[1])+': '+str(round(self.flux[1],2))+'+/-'+str(round(self.flux_err[1],2)), 
 				transform = ax.transAxes, color='navy',size='medium', bbox=dict(facecolor='none', edgecolor='navy', pad=10.0))
 
 		#Set plot labels
-		plt.title('Spectrum Fit')
+		plt.title('Spectrum Fit: '+str(self.num))
 		plt.ylabel('Flux (ergs/s/cm^2/A)')
 		plt.xlabel('Wavelength (A)')
 
 		#sets plotting speed and closes the plot before opening a new one
 		plt.pause(0.01)
 		plt.close()
+
+	def write_results(self, df):
+		for l in range(len(self.lines)):
+			df[self.lines[l]][self.num] = self.flux[l]
+			df[self.lines[l]+'_e'][self.num] = self.flux_err[l]
+		return df
+
+
+

@@ -1,4 +1,5 @@
 import numpy as np
+import string as st
 
 #*****************************#
 # Continuum Subtracted Models #
@@ -34,7 +35,7 @@ def SII_doub_gaussian(x, theta):
 def OIII_Hb_trip_gaussian(x, theta):
 	z, sig, inten1, inten2 = theta
 	mu1 = 5007*(1+z)
-	mu2 = 4939*(1+z)
+	mu2 = 4959*(1+z)
 	mu3 = 4861*(1+z)
 	return ( inten1 * (np.exp(-0.5*np.power(x - mu1, 2.) / (np.power(sig, 2.))))) + \
 		((inten1/2.98) * (np.exp(-0.5*np.power(x - mu2, 2.) / (np.power(sig, 2.))))) + \
@@ -54,16 +55,16 @@ def NII_Ha_trip_gaussian(x, theta):
 # Trim Spec Function #
 #********************#
 
-line_dict = {'OII':			{'mod':OII_gaussian,			'wl':[3727]},
-			'Hb':			{'mod':Hb_gaussian,				'wl':[4861]},
-			'OIII_doub':	{'mod':OIII_doub_gaussian,		'wl':[4959, 5007]},
-			'SII_doub':		{'mod':SII_doub_gaussian,		'wl':[6717, 6731]},
-			'OIII_Hb_trip':	{'mod':OIII_Hb_trip_gaussian,	'wl':[4861, 4959, 5007]},
-			'NII_Ha_trip':	{'mod':NII_Ha_trip_gaussian,	'wl':[6549, 6562, 6583]}}
+line_dict = {'OII':			{'mod':OII_gaussian,			'lines':['[OII]3727'],				'trim':(3700.0,3760.0)},
+			'Hb':			{'mod':Hb_gaussian,				'lines':['[Hb]4861'],				'trim':(4830.0, 4890.0)},
+			'OIII_doub':	{'mod':OIII_doub_gaussian,		'lines':['[OIII]5007'],				'trim':(4930.0, 5050.0)},
+			'SII_doub':		{'mod':SII_doub_gaussian,		'lines':['[SII]6731','[SII]6717'],	'trim':(6700.0, 6750.0)},
+			'OIII_Hb_trip':	{'mod':OIII_Hb_trip_gaussian,	'lines':['[OIII]5007','[Hb]4861'],	'trim':(4830.0, 5050.0)},
+			'NII_Ha_trip':	{'mod':NII_Ha_trip_gaussian,	'lines':['[NII]6583','[Ha]6562'],	'trim':(6520.0, 6610.0)}}
 
 def trim_spec_for_model(line, dat, residuals, wl):
-	min_wave = line_dict[line]['wl'][0] - 50
-	max_wave = line_dict[line]['wl'][-1] + 50
+	min_wave = line_dict[line]['trim'][0]
+	max_wave = line_dict[line]['trim'][1]
 	inds = np.where((min_wave < wl) & (wl < max_wave))
 
 	dat       = dat[:, inds]

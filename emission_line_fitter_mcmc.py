@@ -1,14 +1,8 @@
 import numpy as np
-import math
-import string
-from scipy.integrate import quad
-import subprocess
-import os.path as op
-import sys
-import itertools
+import pandas as pd 
+
 import model_line_functions as mlf
 import emission_line_emcee_functions as elef
-import matplotlib.pyplot as plt
 
 #****************************************#
 # Load in 2D spectral Data and Residuals #
@@ -33,7 +27,7 @@ dat       = np.add(gasfit, residuals)
 #************************#
 # User Defined Variables #
 #************************#
-outname = 'F1_B_OIII_gasResid.dat'
+pd_dataframe = 'M82_F1.csv'
 
 line = 'OIII_Hb_trip'
 z		= 0.000677
@@ -43,27 +37,44 @@ model_bounds = [(0.0005,0.002), (3.5,4.5), (0.0, 20.0), (0.0, 20.0)] #z, sig, in
 ndim, nwalkers = len(thetaGuess), 100
 nchains = (50, 100) #(200, 500)
 
+make_dataframe = False
+
 #+++++++++++++++++++ end user defined variables +++++++++++++++++++++#
+
+#*****************************#
+# Initialize Pandas Dataframe #
+#*****************************#
+if make_dataframe:
+	index = np.arange(np.shape(dat)[0])
+	columns = ['[OII]3727', '[Hb]4861', '[OIII]4959', '[OIII]5007', '[Ha]6562', '[NII]6549', '[NII]6583', '[SII]6717', '[SII]6731', 
+				'[OII]3727_e', '[Hb]4861_e', '[OIII]4959_e', '[OIII]5007_e', '[Ha]6562_e', '[NII]6549_e', '[NII]6583_e', '[SII]6717_e', '[SII]6731_e']
+	df = pd.DataFrame(index=index, columns=columns)
+else:
+	df = pd.read_csv(pd_dataframe)
 
 # trim the data and residual spectra around the line(s) to be fit
 dat, residuals, wl_sol = mlf.trim_spec_for_model(line, dat, residuals, wl_sol)
 
-#+++++++++++++++++++ this is where I need to add iteration over the data cube +++++++++++++++++++++#
-
-#for i in range(np.shape(dat)[0]):
+#for i in index:
 for i in range(5):
 	print 'Spec '+str(i)
 	#define the arguments containing the observed data for emcee
 	args=(wl_sol, dat[i], np.std(residuals[i])**2)
 
 	#build and MCMC object for that line
-	OII_MCMC = elef.MCMC_functions(mlf.line_dict[line]['mod'], model_bounds, args)
+	OII_MCMC = elef.MCMC_functions(i, mlf.line_dict[line]['lines'], mlf.line_dict[line]['mod'], model_bounds, args)
 	#call to run emcee
 	flat_samp, mc_results = OII_MCMC.run_emcee(ndim, nwalkers, nchains, thetaGuess)
 	#calculate integrated flux of lines
 	flux, flux_err = OII_MCMC.integrate_flux()
 	#plot the results of the emcee
 	OII_MCMC.plot_results()
+	#write the results to a pandas dataframe
+	new_df = OII_MCMC.write_results(df)
+
+new_df.to_csv(pd_dataframe)
+print new_df.head(7)
+
 
 
 
