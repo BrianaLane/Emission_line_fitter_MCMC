@@ -68,18 +68,4 @@ def trim_spec_for_model(line, dat, residuals, wl):
 	residuals = residuals[:, inds]
 	wl = wl[inds]
 
-	return dat, residuals, wl
-
-#********************#
-# Analysis Functions #
-#********************#
-
-def fwhm(sig):
-	fwhm = 2*np.sqrt(2*np.log(2))*sig
-	return fwhm
-
-def integrate_flux(integrand, low_bound, up_bound, args):
-	I =  quad(integrand, low_bound, up_bound, args=args)
-	tot_flux = I[0]
-	tot_flux_err = I[1]
-	return tot_flux, tot_flux_err
+	return np.vstack(dat), np.vstack(residuals), wl

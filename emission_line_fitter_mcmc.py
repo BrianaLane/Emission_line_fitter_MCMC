@@ -1,7 +1,6 @@
 import numpy as np
 import math
 import string
-import matplotlib.pyplot as plt
 from scipy.integrate import quad
 import subprocess
 import os.path as op
@@ -9,6 +8,7 @@ import sys
 import itertools
 import model_line_functions as mlf
 import emission_line_emcee_functions as elef
+import matplotlib.pyplot as plt
 
 #****************************************#
 # Load in 2D spectral Data and Residuals #
@@ -41,31 +41,36 @@ z		= 0.000677
 thetaGuess = [z, 4, 4, 4] #z, sig, inten1, (inten2)
 model_bounds = [(0.0005,0.002), (3.5,4.5), (0.0, 20.0), (0.0, 20.0)] #z, sig, inten1, (inten2)
 ndim, nwalkers = len(thetaGuess), 100
-nchains = (200, 500)
+nchains = (50, 100) #(200, 500)
 
 #+++++++++++++++++++ end user defined variables +++++++++++++++++++++#
 
-model_dict = {'OII': mlf.OII_gaussian,
-			'Hb': mlf.Hb_gaussian,
-			'OIII_doub': mlf.OIII_doub_gaussian,
-			'SII_doub': mlf.SII_doub_gaussian,
-			'OIII_Hb_trip': mlf.OIII_Hb_trip_gaussian,
-			'NII_Ha_trip': mlf.NII_Ha_trip_gaussian}
+line_dict = {'OII':			{'mod':mlf.OII_gaussian,			'wl':[3727]},
+			'Hb':			{'mod':mlf.Hb_gaussian,				'wl':[4861]},
+			'OIII_doub':	{'mod':mlf.OIII_doub_gaussian,		'wl':[4959, 5007]},
+			'SII_doub':		{'mod':mlf.SII_doub_gaussian,		'wl':[6717, 6731]},
+			'OIII_Hb_trip':	{'mod':mlf.OIII_Hb_trip_gaussian,	'wl':[4861, 4959, 5007]},
+			'NII_Ha_trip':	{'mod':mlf.NII_Ha_trip_gaussian,	'wl':[6549, 6562, 6583]}}
 
 # trim the data and residual spectra around the line(s) to be fit
 dat, residuals, wl_sol = mlf.trim_spec_for_model(line, dat, residuals, wl_sol)
 
 #+++++++++++++++++++ this is where I need to add iteration over the data cube +++++++++++++++++++++#
-#define the arguments containing the observed data for emcee
-args=(wl_sol, dat[0][0], np.std(residuals[0][0])**2)
 
-#build and MCMC object for that line
-OII_MCMC = elef.MCMC_functions(model_dict[line], model_bounds, args)
-#call to run emcee
-flat_samp, mc_results = OII_MCMC.run_emcee(OII_MCMC.lnprob, ndim, nwalkers, nchains, thetaGuess)
-print mc_results 
-#plot the results of the emcee
-OII_MCMC.plot_results(mc_results)
+#for i in range(np.shape(dat)[0]):
+for i in range(3):
+	#define the arguments containing the observed data for emcee
+	args=(wl_sol, dat[i], np.std(residuals[i])**2)
+
+	#build and MCMC object for that line
+	OII_MCMC = elef.MCMC_functions(line_dict[line]['mod'], model_bounds, args)
+	#call to run emcee
+	flat_samp, mc_results = OII_MCMC.run_emcee(ndim, nwalkers, nchains, thetaGuess)
+	print mc_results
+	#calculate integrated flux of lines
+	flux, flux_err = OII_MCMC.integrate_flux()
+	#plot the results of the emcee
+	OII_MCMC.plot_results()
 
 
 

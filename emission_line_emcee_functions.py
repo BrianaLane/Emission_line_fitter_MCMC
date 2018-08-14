@@ -2,6 +2,7 @@ import numpy as np
 import emcee
 import math
 import os
+from scipy.integrate import quad
 import matplotlib.pyplot as plt
 import model_line_functions as mlf
 
@@ -10,6 +11,10 @@ class MCMC_functions():
 		self.model = model
 		self.model_bounds = model_bounds
 		self.args = args
+		self.int_flux = 0.0
+		self.mc_results = 0.0
+		self.flux = 0.0
+		self.flux_err = 0.0
 
 	#define the log likelihood function
 	def lnlike(self, theta, x, y, yerr):
@@ -34,10 +39,10 @@ class MCMC_functions():
 			return -np.inf
 		return lp + self.lnlike(theta, x, y, yerr)
 
-	def run_emcee(self, lnprob, ndim, nwalkers, nchains, thetaGuess):
+	def run_emcee(self, ndim, nwalkers, nchains, thetaGuess):
 
 		pos = [thetaGuess + 1e-4*np.random.randn(ndim) for i in range(nwalkers)]
-		sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=self.args)
+		sampler = emcee.EnsembleSampler(nwalkers, ndim, self.lnprob, args=self.args)
 
 		print "Burning in ..."
 		pos, prob, state = sampler.run_mcmc(pos, 200)
@@ -51,20 +56,64 @@ class MCMC_functions():
 		samples = sampler.chain[:, :, :].reshape((-1, ndim))
 		mc_results = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
 
+		self.mc_results = mc_results
+
 		return flat_samples, mc_results
 
-	def plot_results(self, mc_results):
+	def gaussian(self, x, z, sig, inten):
+		mu = 100*(1+z)
+		return inten * (np.exp(-0.5*np.power(x - mu, 2.) / (np.power(sig, 2.))))
+
+	def integrate_flux(self):
+		mu = 100*(1+self.mc_results[0][0])
+		a = [i[0] for i in self.mc_results]
+
+		tot_flux = []
+		tot_flux_err= []
+
+		I = quad(self.gaussian, mu-100, mu+100, args=(a[0], a[1], a[2]))
+		tot_flux.append(I[0])
+		tot_flux_err.append(I[1])
+
+		if len(a)>3:
+			I2 = quad(self.gaussian, mu-100, mu+100, args=(a[0], a[1], a[3]))
+			tot_flux.append(I2[0])
+			tot_flux_err.append(I2[1])
+
+		self.flux = tot_flux
+		self.flux_err = tot_flux_err
+
+		return tot_flux, tot_flux_err
+
+	def plot_results(self):
 		wl_sol, dat, disp = self.args
 
-		sol    = [i[0] for i in mc_results]
-		up_lim = [i[1] for i in mc_results]
-		lo_lim = [i[2] for i in mc_results]
+		sol    = [i[0] for i in self.mc_results]
+		up_lim = [i[1] for i in self.mc_results]
+		lo_lim = [i[2] for i in self.mc_results]
 
 		up_lim_theta = np.add(sol,up_lim)
 		lo_lim_theta = np.subtract(sol,lo_lim)
+
+		fig, ax = plt.subplots(figsize=(13, 8))
 
 		plt.plot(wl_sol, dat)
 		plt.plot(wl_sol, self.model(wl_sol, theta = sol), color='red')
 		plt.plot(wl_sol, self.model(wl_sol, theta = up_lim_theta), color='red', ls=':')
 		plt.plot(wl_sol, self.model(wl_sol, theta = lo_lim_theta), color='red', ls=':')
-		plt.show()
+
+		plt.text(0.05,0.82,'flux '+str(round(self.flux[0]))+'+/-'+str(round(self.flux_err[0])), 
+			transform = ax.transAxes, color='navy',size='medium', bbox=dict(facecolor='none', edgecolor='navy', pad=10.0))
+		if len(sol)>3:
+			plt.text(0.05,0.72,'flux '+str(round(self.flux[1]))+'+/-'+str(round(self.flux_err[1])), 
+				transform = ax.transAxes, color='navy',size='medium', bbox=dict(facecolor='none', edgecolor='navy', pad=10.0))
+
+		#Set plot labels
+		plt.title('Spectrum Fit')
+		plt.ylabel('Flux (ergs/s/cm^2/A)')
+		plt.xlabel('Wavelength (A)')
+		#plt.legend(loc=1)
+
+		#sets plotting speed and closes the plot before opening a new one
+		plt.pause(0.01)
+		plt.close()
