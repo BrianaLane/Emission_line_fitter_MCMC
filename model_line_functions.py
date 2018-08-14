@@ -54,15 +54,17 @@ def NII_Ha_trip_gaussian(x, theta):
 # Trim Spec Function #
 #********************#
 
-wl_trim_dict = {'OII':(3700.0, 3760.0),
-				'Hb': (4830.0, 4890.0),
-				'OIII_doub': (4930.0, 5050.0),
-				'SII_doub': (6700.0, 6750.0),
-				'OIII_Hb_trip': (4830.0, 5050.0),
-				'NII_Ha_trip': (6520.0, 6610.0)}
+line_dict = {'OII':			{'mod':OII_gaussian,			'wl':[3727]},
+			'Hb':			{'mod':Hb_gaussian,				'wl':[4861]},
+			'OIII_doub':	{'mod':OIII_doub_gaussian,		'wl':[4959, 5007]},
+			'SII_doub':		{'mod':SII_doub_gaussian,		'wl':[6717, 6731]},
+			'OIII_Hb_trip':	{'mod':OIII_Hb_trip_gaussian,	'wl':[4861, 4959, 5007]},
+			'NII_Ha_trip':	{'mod':NII_Ha_trip_gaussian,	'wl':[6549, 6562, 6583]}}
 
 def trim_spec_for_model(line, dat, residuals, wl):
-	inds = np.where((wl_trim_dict[line][0] < wl) & (wl < wl_trim_dict[line][1]))
+	min_wave = line_dict[line]['wl'][0] - 50
+	max_wave = line_dict[line]['wl'][-1] + 50
+	inds = np.where((min_wave < wl) & (wl < max_wave))
 
 	dat       = dat[:, inds]
 	residuals = residuals[:, inds]

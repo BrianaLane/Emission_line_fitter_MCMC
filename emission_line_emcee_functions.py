@@ -102,17 +102,16 @@ class MCMC_functions():
 		plt.plot(wl_sol, self.model(wl_sol, theta = up_lim_theta), color='red', ls=':')
 		plt.plot(wl_sol, self.model(wl_sol, theta = lo_lim_theta), color='red', ls=':')
 
-		plt.text(0.05,0.82,'flux '+str(round(self.flux[0]))+'+/-'+str(round(self.flux_err[0])), 
+		plt.text(0.05,0.82,'flux1 '+str(round(self.flux[0],2))+'+/-'+str(round(self.flux_err[0],2)), 
 			transform = ax.transAxes, color='navy',size='medium', bbox=dict(facecolor='none', edgecolor='navy', pad=10.0))
 		if len(sol)>3:
-			plt.text(0.05,0.72,'flux '+str(round(self.flux[1]))+'+/-'+str(round(self.flux_err[1])), 
+			plt.text(0.05,0.72,'flux2 '+str(round(self.flux[1],2))+'+/-'+str(round(self.flux_err[1],2)), 
 				transform = ax.transAxes, color='navy',size='medium', bbox=dict(facecolor='none', edgecolor='navy', pad=10.0))
 
 		#Set plot labels
 		plt.title('Spectrum Fit')
 		plt.ylabel('Flux (ergs/s/cm^2/A)')
 		plt.xlabel('Wavelength (A)')
-		#plt.legend(loc=1)
 
 		#sets plotting speed and closes the plot before opening a new one
 		plt.pause(0.01)

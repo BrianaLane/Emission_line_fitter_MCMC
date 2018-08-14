@@ -45,28 +45,21 @@ nchains = (50, 100) #(200, 500)
 
 #+++++++++++++++++++ end user defined variables +++++++++++++++++++++#
 
-line_dict = {'OII':			{'mod':mlf.OII_gaussian,			'wl':[3727]},
-			'Hb':			{'mod':mlf.Hb_gaussian,				'wl':[4861]},
-			'OIII_doub':	{'mod':mlf.OIII_doub_gaussian,		'wl':[4959, 5007]},
-			'SII_doub':		{'mod':mlf.SII_doub_gaussian,		'wl':[6717, 6731]},
-			'OIII_Hb_trip':	{'mod':mlf.OIII_Hb_trip_gaussian,	'wl':[4861, 4959, 5007]},
-			'NII_Ha_trip':	{'mod':mlf.NII_Ha_trip_gaussian,	'wl':[6549, 6562, 6583]}}
-
 # trim the data and residual spectra around the line(s) to be fit
 dat, residuals, wl_sol = mlf.trim_spec_for_model(line, dat, residuals, wl_sol)
 
 #+++++++++++++++++++ this is where I need to add iteration over the data cube +++++++++++++++++++++#
 
 #for i in range(np.shape(dat)[0]):
-for i in range(3):
+for i in range(5):
+	print 'Spec '+str(i)
 	#define the arguments containing the observed data for emcee
 	args=(wl_sol, dat[i], np.std(residuals[i])**2)
 
 	#build and MCMC object for that line
-	OII_MCMC = elef.MCMC_functions(line_dict[line]['mod'], model_bounds, args)
+	OII_MCMC = elef.MCMC_functions(mlf.line_dict[line]['mod'], model_bounds, args)
 	#call to run emcee
 	flat_samp, mc_results = OII_MCMC.run_emcee(ndim, nwalkers, nchains, thetaGuess)
-	print mc_results
 	#calculate integrated flux of lines
 	flux, flux_err = OII_MCMC.integrate_flux()
 	#plot the results of the emcee
