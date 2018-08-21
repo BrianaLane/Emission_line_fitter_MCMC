@@ -49,6 +49,13 @@ if make_dataframe:
 	columns = ['[OII]3727', '[Hb]4861', '[OIII]4959', '[OIII]5007', '[Ha]6562', '[NII]6549', '[NII]6583', '[SII]6717', '[SII]6731', 
 				'[OII]3727_e', '[Hb]4861_e', '[OIII]4959_e', '[OIII]5007_e', '[Ha]6562_e', '[NII]6549_e', '[NII]6583_e', '[SII]6717_e', '[SII]6731_e']
 	df = pd.DataFrame(index=index, columns=columns)
+
+	#assign the dtypes to be float for the line fluxes
+	#and objects for the errors since they will be a list of 2 values
+	dtypes = {k: float for k in columns[:9]}
+	dtypes.update({k: object for k in columns[10:]})
+	df = df.astype(dtypes)
+
 else:
 	df = pd.read_csv(pd_dataframe)
 
@@ -56,7 +63,7 @@ else:
 dat, residuals, wl_sol = mlf.trim_spec_for_model(line, dat, residuals, wl_sol)
 
 #for i in index:
-for i in range(20):
+for i in range(1):
 	print 'Spec '+str(i)
 	#define the arguments containing the observed data for emcee
 	args=(wl_sol, dat[i], np.std(residuals[i])**2)
@@ -65,16 +72,15 @@ for i in range(20):
 	OII_MCMC = elef.MCMC_functions(i, mlf.line_dict[line]['lines'], mlf.line_dict[line]['mod'], model_bounds, args)
 	#call to run emcee
 	flat_samp, mc_results = OII_MCMC.run_emcee(ndim, nwalkers, nchains, thetaGuess)
-	print mc_results
 	#calculate integrated flux of lines
-	flux, flux_err = OII_MCMC.integrate_flux()
+	flux, flux_err = OII_MCMC.calculate_flux()
 	#plot the results of the emcee
-	OII_MCMC.plot_results(corner_plot=True)
+	OII_MCMC.plot_results()
 	#write the results to a pandas dataframe
 	new_df = OII_MCMC.write_results(df)
 
 #new_df.to_csv(pd_dataframe)
-print new_df.head(7)
+#print new_df.head(7)
 
 
 

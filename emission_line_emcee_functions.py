@@ -21,7 +21,8 @@ class MCMC_functions():
 		self.mc_results = 0.0
 		self.flat_samples = 0.0
 		self.flux = 0.0
-		self.flux_err = 0.0
+		self.flux_err_up = []
+		self.flux_err_lo = []
 
 	#define the log likelihood function
 	def lnlike(self, theta, x, y, yerr):
@@ -71,26 +72,38 @@ class MCMC_functions():
 		mu = 100*(1+z)
 		return inten * (np.exp(-0.5*np.power(x - mu, 2.) / (np.power(sig, 2.))))
 
-	def integrate_flux(self):
-		mu = 100*(1+self.mc_results[0][0])
-		a = [i[0] for i in self.mc_results]
+	def integrate_flux(self, model_vals):
+		mu = 100*(1+model_vals[0])
 
 		tot_flux = []
 		tot_flux_err= []
 
-		I = quad(self.gaussian, mu-100, mu+100, args=(a[0], a[1], a[2]))
+		I = quad(self.gaussian, mu-100, mu+100, args=(model_vals[0], model_vals[1], model_vals[2]))
 		tot_flux.append(I[0])
 		tot_flux_err.append(I[1])
 
-		if len(a)>3:
-			I2 = quad(self.gaussian, mu-100, mu+100, args=(a[0], a[1], a[3]))
+		if len(model_vals)>3:
+			I2 = quad(self.gaussian, mu-100, mu+100, args=(model_vals[0], model_vals[1], model_vals[3]))
 			tot_flux.append(I2[0])
 			tot_flux_err.append(I2[1])
 
-		self.flux = tot_flux
-		self.flux_err = tot_flux_err
-
 		return tot_flux, tot_flux_err
+
+	def calculate_flux(self):
+		sol    = [i[0] for i in self.mc_results]
+		up_lim = [i[1] for i in self.mc_results]
+		lo_lim = [i[2] for i in self.mc_results]
+
+		flux, int_err    = self.integrate_flux(sol)
+		f_up, int_err_up = self.integrate_flux(np.add(sol, up_lim))
+		f_lo, int_err_lo = self.integrate_flux(np.subtract(sol, lo_lim))
+
+		self.flux = flux
+		for i in range(len(flux)):
+			self.flux_err_up.append(np.sqrt((np.subtract(f_up[i], flux[i])**2) + (int_err[i]**2) + (int_err_up[i]**2)))
+			self.flux_err_lo.append(np.sqrt((np.subtract(flux[i], f_lo[i])**2) + (int_err[i]**2) + (int_err_lo[i]**2)))
+
+		return self.flux, (self.flux_err_up, self.flux_err_lo)
 
 	def plot_results(self, corner_plot=False):
 		wl_sol, dat, disp = self.args
@@ -115,10 +128,14 @@ class MCMC_functions():
 			plt.plot(wl_sol, self.model(wl_sol, theta = up_lim_theta), color='red', ls=':')
 			plt.plot(wl_sol, self.model(wl_sol, theta = lo_lim_theta), color='red', ls=':')
 
-			plt.text(0.05,0.82,'flux '+str(self.lines[0])+': '+str(round(self.flux[0],2))+'+/-'+str(round(self.flux_err[0],2)), 
+			print str(round(self.flux[0],2)), str(round(self.flux_err_up[0],2)), str(round(self.flux_err_lo[0],2))
+
+			res_dict = {'flux': str(round(self.flux[0],2)), 'up_err':str(round(self.flux_err_up[0],2)), 'lo_err':str(round(self.flux_err_lo[0],2))}
+			plt.text(0.05,0.82, 'flux '+str(self.lines[0])+': {flux}  +{up_err} -{lo_err}'.format(**res_dict), 
 				transform = ax.transAxes, color='navy',size='medium', bbox=dict(facecolor='none', edgecolor='navy', pad=10.0))
 			if len(sol)>3:
-				plt.text(0.05,0.72,'flux '+str(self.lines[1])+': '+str(round(self.flux[1],2))+'+/-'+str(round(self.flux_err[1],2)), 
+				res_dict = {'flux': str(round(self.flux[1],2)), 'up_err':str(round(self.flux_err_up[1],2)), 'lo_err':str(round(self.flux_err_lo[1],2))}
+				plt.text(0.05,0.72, 'flux '+str(self.lines[1])+': {flux}  +{up_err} -{lo_err}'.format(**res_dict), 
 					transform = ax.transAxes, color='navy',size='medium', bbox=dict(facecolor='none', edgecolor='navy', pad=10.0))
 
 			#Set plot labels
@@ -127,14 +144,14 @@ class MCMC_functions():
 			plt.xlabel('Wavelength (A)')
 
 			#sets plotting speed and closes the plot before opening a new one
-			plt.pause(0.01)
-			plt.close()
-			#plt.show()
+			# plt.pause(0.01)
+			# plt.close()
+			plt.show()
 
 	def write_results(self, df):
 		for l in range(len(self.lines)):
-			df[self.lines[l]][self.num] = self.flux[l]
-			df[self.lines[l]+'_e'][self.num] = self.flux_err[l]
+			df[self.lines[l]][self.num] = np.round(self.flux[l],3)
+			df[self.lines[l]+'_e'][self.num] = [np.round(self.flux_err_up[l],3), np.round(self.flux_err_lo[l],3)]
 		return df
 
 
