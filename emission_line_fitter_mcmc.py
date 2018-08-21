@@ -35,7 +35,7 @@ z		= 0.000677
 thetaGuess = [z, 4, 4, 4] #z, sig, inten1, (inten2)
 model_bounds = [(0.0005,0.002), (3.5,4.5), (0.0, 20.0), (0.0, 20.0)] #z, sig, inten1, (inten2)
 ndim, nwalkers = len(thetaGuess), 100
-nchains = (50, 100) #(200, 500)
+nchains = (200, 500) #(200, 500)
 
 make_dataframe = False
 
@@ -56,23 +56,24 @@ else:
 dat, residuals, wl_sol = mlf.trim_spec_for_model(line, dat, residuals, wl_sol)
 
 #for i in index:
-for i in range(5):
+for i in range(20):
 	print 'Spec '+str(i)
 	#define the arguments containing the observed data for emcee
 	args=(wl_sol, dat[i], np.std(residuals[i])**2)
 
-	#build and MCMC object for that line
+	#build an MCMC object for that line
 	OII_MCMC = elef.MCMC_functions(i, mlf.line_dict[line]['lines'], mlf.line_dict[line]['mod'], model_bounds, args)
 	#call to run emcee
 	flat_samp, mc_results = OII_MCMC.run_emcee(ndim, nwalkers, nchains, thetaGuess)
+	print mc_results
 	#calculate integrated flux of lines
 	flux, flux_err = OII_MCMC.integrate_flux()
 	#plot the results of the emcee
-	OII_MCMC.plot_results()
+	OII_MCMC.plot_results(corner_plot=True)
 	#write the results to a pandas dataframe
 	new_df = OII_MCMC.write_results(df)
 
-new_df.to_csv(pd_dataframe)
+#new_df.to_csv(pd_dataframe)
 print new_df.head(7)
 
 

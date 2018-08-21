@@ -6,6 +6,7 @@ import os
 import pandas as pd
 from scipy.integrate import quad
 import matplotlib.pyplot as plt
+import corner
 import model_line_functions as mlf
 
 class MCMC_functions():
@@ -18,6 +19,7 @@ class MCMC_functions():
 		self.args = args
 		self.int_flux = 0.0
 		self.mc_results = 0.0
+		self.flat_samples = 0.0
 		self.flux = 0.0
 		self.flux_err = 0.0
 
@@ -50,20 +52,20 @@ class MCMC_functions():
 		sampler = emcee.EnsembleSampler(nwalkers, ndim, self.lnprob, args=self.args)
 
 		print "Burning in ..."
-		pos, prob, state = sampler.run_mcmc(pos, 200)
+		pos, prob, state = sampler.run_mcmc(pos, nchains[0])
 
 		sampler.reset()
 
 		print "Running MCMC ..."
-		pos, prob, state = sampler.run_mcmc(pos, 500, rstate0=state)
+		pos, prob, state = sampler.run_mcmc(pos, nchains[0], rstate0=state)
 
-		flat_samples = sampler.flatchain
+		self.flat_samples = sampler.flatchain
 		samples = sampler.chain[:, :, :].reshape((-1, ndim))
 		mc_results = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
 
 		self.mc_results = mc_results
 
-		return flat_samples, mc_results
+		return self.flat_samples, mc_results
 
 	def gaussian(self, x, z, sig, inten):
 		mu = 100*(1+z)
@@ -90,7 +92,7 @@ class MCMC_functions():
 
 		return tot_flux, tot_flux_err
 
-	def plot_results(self):
+	def plot_results(self, corner_plot=False):
 		wl_sol, dat, disp = self.args
 
 		sol    = [i[0] for i in self.mc_results]
@@ -100,27 +102,34 @@ class MCMC_functions():
 		up_lim_theta = np.add(sol,up_lim)
 		lo_lim_theta = np.subtract(sol,lo_lim)
 
-		fig, ax = plt.subplots(figsize=(13, 8))
+		if corner_plot:
+			fig = corner.corner(self.flat_samples, labels=["$z$", "$simga$", "$inten1$", "$inten2$"], truths=sol, figsize=(5, 5))
+			plt.pause(0.01)
+			plt.close()
 
-		plt.plot(wl_sol, dat)
-		plt.plot(wl_sol, self.model(wl_sol, theta = sol), color='red')
-		plt.plot(wl_sol, self.model(wl_sol, theta = up_lim_theta), color='red', ls=':')
-		plt.plot(wl_sol, self.model(wl_sol, theta = lo_lim_theta), color='red', ls=':')
+		else:
+			fig, ax = plt.subplots(figsize=(13, 8))
 
-		plt.text(0.05,0.82,'flux '+str(self.lines[0])+': '+str(round(self.flux[0],2))+'+/-'+str(round(self.flux_err[0],2)), 
-			transform = ax.transAxes, color='navy',size='medium', bbox=dict(facecolor='none', edgecolor='navy', pad=10.0))
-		if len(sol)>3:
-			plt.text(0.05,0.72,'flux '+str(self.lines[1])+': '+str(round(self.flux[1],2))+'+/-'+str(round(self.flux_err[1],2)), 
+			plt.plot(wl_sol, dat)
+			plt.plot(wl_sol, self.model(wl_sol, theta = sol), color='red')
+			plt.plot(wl_sol, self.model(wl_sol, theta = up_lim_theta), color='red', ls=':')
+			plt.plot(wl_sol, self.model(wl_sol, theta = lo_lim_theta), color='red', ls=':')
+
+			plt.text(0.05,0.82,'flux '+str(self.lines[0])+': '+str(round(self.flux[0],2))+'+/-'+str(round(self.flux_err[0],2)), 
 				transform = ax.transAxes, color='navy',size='medium', bbox=dict(facecolor='none', edgecolor='navy', pad=10.0))
+			if len(sol)>3:
+				plt.text(0.05,0.72,'flux '+str(self.lines[1])+': '+str(round(self.flux[1],2))+'+/-'+str(round(self.flux_err[1],2)), 
+					transform = ax.transAxes, color='navy',size='medium', bbox=dict(facecolor='none', edgecolor='navy', pad=10.0))
 
-		#Set plot labels
-		plt.title('Spectrum Fit: '+str(self.num))
-		plt.ylabel('Flux (ergs/s/cm^2/A)')
-		plt.xlabel('Wavelength (A)')
+			#Set plot labels
+			plt.title('Spectrum Fit: '+str(self.num))
+			plt.ylabel('Flux (ergs/s/cm^2/A)')
+			plt.xlabel('Wavelength (A)')
 
-		#sets plotting speed and closes the plot before opening a new one
-		plt.pause(0.01)
-		plt.close()
+			#sets plotting speed and closes the plot before opening a new one
+			plt.pause(0.01)
+			plt.close()
+			#plt.show()
 
 	def write_results(self, df):
 		for l in range(len(self.lines)):

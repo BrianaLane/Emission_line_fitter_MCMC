@@ -55,7 +55,7 @@ def NII_Ha_trip_gaussian(x, theta):
 # Trim Spec Function #
 #********************#
 
-line_dict = {'OII':			{'mod':OII_gaussian,			'lines':['[OII]3727'],				'trim':(3700.0,3760.0)},
+line_dict = {'OII':			{'mod':OII_gaussian,			'lines':['[OII]3727'],				'trim':(3700.0, 3760.0)},
 			'Hb':			{'mod':Hb_gaussian,				'lines':['[Hb]4861'],				'trim':(4830.0, 4890.0)},
 			'OIII_doub':	{'mod':OIII_doub_gaussian,		'lines':['[OIII]5007'],				'trim':(4930.0, 5050.0)},
 			'SII_doub':		{'mod':SII_doub_gaussian,		'lines':['[SII]6731','[SII]6717'],	'trim':(6700.0, 6750.0)},
