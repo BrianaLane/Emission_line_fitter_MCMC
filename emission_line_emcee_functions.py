@@ -10,35 +10,56 @@ import corner
 import model_line_functions as mlf
 
 class MCMC_functions():
-	def __init__(self, num, lines, model, model_bounds, args):
-		self.num = num
-		self.lines = lines
-		self.wl_lines = [int(st.split(w, ']')[1]) for w in lines]
-		self.model = model
+	def __init__(self, num, line_ID, model_bounds, args, fit_cont, abs_params):
+		self.num          = num
+		self.line_ID      = line_ID
 		self.model_bounds = model_bounds
-		self.args = args
-		self.int_flux = 0.0
-		self.mc_results = 0.0
+		self.args         = args
+		self.fit_cont     = fit_cont
+		self.lines        = mlf.line_dict[self.line_ID]['lines']
+		self.wl_lines     = [int(st.split(w, ']')[1]) for w in self.lines]
+		self.abs_params   = abs_params
+
+		if self.fit_cont:
+			self.model    = mlf.line_dict[self.line_ID]['cont_mod']
+		else:
+			self.model    = mlf.line_dict[self.line_ID]['mod']
+
+		self.int_flux     = 0.0
+		self.mc_results   = 0.0
 		self.flat_samples = 0.0
-		self.flux = 0.0
-		self.flux_err_up = []
-		self.flux_err_lo = []
+		self.flux         = 0.0
+		self.flux_err_up  = []
+		self.flux_err_lo  = []
 
 	#define the log likelihood function
 	def lnlike(self, theta, x, y, yerr):
-		mod = self.model(x, theta)
+		if self.abs_params[0] == 0.0:
+			mod = self.model(x, theta)
+		else:
+			mod = self.model(x, theta, self.abs_params)
 		return -0.5*sum(((y - mod)**2)/(yerr**2))
 
 	#define the log prior function
 	def lnprior(self, theta):
-		if len(theta) > 3:
-			if ( self.model_bounds[0][0] <= theta[0] <= self.model_bounds[0][1]) and (self.model_bounds[1][0] <= theta[1] <= self.model_bounds[1][1]) and (self.model_bounds[2][0] <= theta[2] <= self.model_bounds[2][1]) and (self.model_bounds[3][0] <= theta[2] <= self.model_bounds[3][1]):
-				return 0.0
-			return -np.inf
+		if self.fit_cont:
+			if len(theta) == 5:
+				if (self.model_bounds[0][0] <= theta[0] <= self.model_bounds[0][1]) and (self.model_bounds[1][0] <= theta[1] <= self.model_bounds[1][1]) and (self.model_bounds[2][0] <= theta[2] <= self.model_bounds[2][1]) and (self.model_bounds[3][0] <= theta[3] <= self.model_bounds[3][1]) and (self.model_bounds[4][0] <= theta[4] <= self.model_bounds[4][1]):
+					return 0.0
+				return -np.inf
+			elif len(theta) == 6:
+				if (self.model_bounds[0][0] <= theta[0] <= self.model_bounds[0][1]) and (self.model_bounds[1][0] <= theta[1] <= self.model_bounds[1][1]) and (self.model_bounds[2][0] <= theta[2] <= self.model_bounds[2][1]) and (self.model_bounds[3][0] <= theta[3] <= self.model_bounds[3][1]) and (self.model_bounds[4][0] <= theta[4] <= self.model_bounds[4][1]) and (self.model_bounds[5][0] <= theta[5] <= self.model_bounds[5][1]):
+					return 0.0
+				return -np.inf
 		else:
-			if ( self.model_bounds[0][0] <= theta[0] <= self.model_bounds[0][1]) and (self.model_bounds[1][0] <= theta[1] <= self.model_bounds[1][1]) and (self.model_bounds[2][0] <= theta[2] <= self.model_bounds[2][1]):
-				return 0.0
-			return -np.inf
+			if len(theta) == 3:
+				if (self.model_bounds[0][0] <= theta[0] <= self.model_bounds[0][1]) and (self.model_bounds[1][0] <= theta[1] <= self.model_bounds[1][1]) and (self.model_bounds[2][0] <= theta[2] <= self.model_bounds[2][1]):
+					return 0.0
+				return -np.inf
+			elif len(theta) == 4:
+				if (self.model_bounds[0][0] <= theta[0] <= self.model_bounds[0][1]) and (self.model_bounds[1][0] <= theta[1] <= self.model_bounds[1][1]) and (self.model_bounds[2][0] <= theta[2] <= self.model_bounds[2][1]) and (self.model_bounds[3][0] <= theta[3] <= self.model_bounds[3][1]):
+					return 0.0
+				return -np.inf
 
 	#define log postierior to sovle with emcee
 	def lnprob(self, theta, x, y, yerr):
@@ -82,7 +103,7 @@ class MCMC_functions():
 		tot_flux.append(I[0])
 		tot_flux_err.append(I[1])
 
-		if len(model_vals)>3:
+		if (len(model_vals) == 4) or (len(model_vals) == 6):
 			I2 = quad(self.gaussian, mu-100, mu+100, args=(model_vals[0], model_vals[1], model_vals[3]))
 			tot_flux.append(I2[0])
 			tot_flux_err.append(I2[1])
@@ -123,10 +144,20 @@ class MCMC_functions():
 		else:
 			fig, ax = plt.subplots(figsize=(13, 8))
 
-			plt.plot(wl_sol, dat)
-			plt.plot(wl_sol, self.model(wl_sol, theta = sol), color='red')
-			plt.plot(wl_sol, self.model(wl_sol, theta = up_lim_theta), color='red', ls=':')
-			plt.plot(wl_sol, self.model(wl_sol, theta = lo_lim_theta), color='red', ls=':')
+			if self.abs_params[0] == 0.0:
+				for rand_theta in self.flat_samples[np.random.randint(len(self.flat_samples), size=100)]:
+					plt.plot(wl_sol, self.model(wl_sol, theta=rand_theta), color='grey', alpha=0.25)
+				plt.plot(wl_sol, dat)
+				plt.plot(wl_sol, self.model(wl_sol, theta = sol), color='red')
+				plt.plot(wl_sol, self.model(wl_sol, theta = up_lim_theta), color='red', ls=':')
+				plt.plot(wl_sol, self.model(wl_sol, theta = lo_lim_theta), color='red', ls=':')
+			else:
+				for rand_theta in self.flat_samples[np.random.randint(len(self.flat_samples), size=100)]:
+					plt.plot(wl_sol, self.model(wl_sol, rand_theta, self.abs_params), color='grey', alpha=0.25)
+				plt.plot(wl_sol, dat)
+				plt.plot(wl_sol, self.model(wl_sol, sol, self.abs_params), color='red')
+				plt.plot(wl_sol, self.model(wl_sol, up_lim_theta, self.abs_params), color='red', ls=':')
+				plt.plot(wl_sol, self.model(wl_sol, lo_lim_theta, self.abs_params), color='red', ls=':')
 
 			print str(round(self.flux[0],2)), str(round(self.flux_err_up[0],2)), str(round(self.flux_err_lo[0],2))
 
@@ -144,14 +175,25 @@ class MCMC_functions():
 			plt.xlabel('Wavelength (A)')
 
 			#sets plotting speed and closes the plot before opening a new one
-			# plt.pause(0.01)
-			# plt.close()
-			plt.show()
+			plt.pause(0.01)
+			plt.close()
+			#plt.show()
 
 	def write_results(self, df):
 		for l in range(len(self.lines)):
-			df[self.lines[l]][self.num] = np.round(self.flux[l],3)
-			df[self.lines[l]+'_e'][self.num] = [np.round(self.flux_err_up[l],3), np.round(self.flux_err_lo[l],3)]
+			#print df[self.lines[l]]
+			#df[self.lines[l]][self.num] = np.round(self.flux[l],3)
+			#df[self.lines[l]+'_e'][self.num] = [np.round(self.flux_err_up[l],3), np.round(self.flux_err_lo[l],3)]
+			col   = self.lines[l]
+			col_e = self.lines[l]+'_e'
+			row   = self.num
+			val   = np.round(self.flux[l],3)
+			val_e = [np.round(self.flux_err_up[l],3), np.round(self.flux_err_lo[l],3)]
+
+			print row, col, col_e, val, val_e
+
+			df.set_value(row, col, val)
+			df.set_value(row, col_e, val_e)
 		return df
 
 
