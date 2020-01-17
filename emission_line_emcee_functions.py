@@ -10,7 +10,7 @@ import corner
 import model_line_functions as mlf
 
 class MCMC_functions():
-	def __init__(self, num, line_ID, model_bounds, args, fit_cont, abs_params):
+	def __init__(self, num, line_ID, model_bounds, args, fit_cont):
 		self.num          = num
 		self.line_ID      = line_ID
 		self.model_bounds = model_bounds
@@ -18,7 +18,6 @@ class MCMC_functions():
 		self.fit_cont     = fit_cont
 		self.lines        = mlf.line_dict[self.line_ID]['lines']
 		self.wl_lines     = [int(st.split(w, ']')[1]) for w in self.lines]
-		self.abs_params   = abs_params
 
 		if self.fit_cont:
 			self.model    = mlf.line_dict[self.line_ID]['cont_mod']
@@ -34,10 +33,7 @@ class MCMC_functions():
 
 	#define the log likelihood function
 	def lnlike(self, theta, x, y, yerr):
-		if self.abs_params[0] == 0.0:
-			mod = self.model(x, theta)
-		else:
-			mod = self.model(x, theta, self.abs_params)
+		mod = self.model(x, theta)
 		return -0.5*sum(((y - mod)**2)/(yerr**2))
 
 	#define the log prior function
@@ -71,14 +67,14 @@ class MCMC_functions():
 	def run_emcee(self, ndim, nwalkers, nchains, thetaGuess):
 
 		pos = [thetaGuess + 1e-4*np.random.randn(ndim) for i in range(nwalkers)]
-		sampler = emcee.EnsembleSampler(nwalkers, ndim, self.lnprob, args=self.args)
+		sampler = emcee.EnsembleSampler(nwalkers, ndim, self.lnprob, args=self.args, a=1)
 
-		print "Burning in ..."
+		#print "Burning in ..."
 		pos, prob, state = sampler.run_mcmc(pos, nchains[0])
 
 		sampler.reset()
 
-		print "Running MCMC ..."
+		#print "Running MCMC ..."
 		pos, prob, state = sampler.run_mcmc(pos, nchains[0], rstate0=state)
 
 		self.flat_samples = sampler.flatchain
@@ -86,6 +82,8 @@ class MCMC_functions():
 		mc_results = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
 
 		self.mc_results = mc_results
+
+		#print 'MC RESULTS: ',mc_results 
 
 		return self.flat_samples, mc_results
 
@@ -97,103 +95,128 @@ class MCMC_functions():
 		mu = 100*(1+model_vals[0])
 
 		tot_flux = []
-		tot_flux_err= []
+		#tot_flux_err= []
 
-		I = quad(self.gaussian, mu-100, mu+100, args=(model_vals[0], model_vals[1], model_vals[2]))
-		tot_flux.append(I[0])
-		tot_flux_err.append(I[1])
+		I= model_vals[2] * model_vals[1] * np.sqrt(2*np.pi)
+		#print 'Flux: ', model_vals[2], model_vals[1], I
+		tot_flux.append(I)
 
-		if (len(model_vals) == 4) or (len(model_vals) == 6):
-			I2 = quad(self.gaussian, mu-100, mu+100, args=(model_vals[0], model_vals[1], model_vals[3]))
-			tot_flux.append(I2[0])
-			tot_flux_err.append(I2[1])
+		#if (len(model_vals) == 4) or (len(model_vals) == 6):
+		if self.line_ID != 'NeIII':
+			I2 = model_vals[3] * model_vals[1] * np.sqrt(2*np.pi)
+			#print 'Flux: ', model_vals[3], model_vals[1], I2
+			tot_flux.append(I2)
 
-		return tot_flux, tot_flux_err
+		#print tot_flux
+		return tot_flux
 
 	def calculate_flux(self):
 		sol    = [i[0] for i in self.mc_results]
 		up_lim = [i[1] for i in self.mc_results]
 		lo_lim = [i[2] for i in self.mc_results]
 
-		flux, int_err    = self.integrate_flux(sol)
-		f_up, int_err_up = self.integrate_flux(np.add(sol, up_lim))
-		f_lo, int_err_lo = self.integrate_flux(np.subtract(sol, lo_lim))
+		flux = self.integrate_flux(sol)
+		f_up = self.integrate_flux(np.add(sol, up_lim))
+		f_lo = self.integrate_flux(np.subtract(sol, lo_lim))
 
 		self.flux = flux
-		for i in range(len(flux)):
-			self.flux_err_up.append(np.sqrt((np.subtract(f_up[i], flux[i])**2) + (int_err[i]**2) + (int_err_up[i]**2)))
-			self.flux_err_lo.append(np.sqrt((np.subtract(flux[i], f_lo[i])**2) + (int_err[i]**2) + (int_err_lo[i]**2)))
+		self.flux_err_up = [f_up[i] - flux[i] for i in range(len(flux))]
+		self.flux_err_lo = [flux[i] - f_lo[i] for i in range(len(flux))]
+		# for i in range(len(flux)):
+		# 	self.flux_err_up.append(np.sqrt((np.subtract(f_up[i], flux[i])**2) + (int_err[i]**2) + (int_err_up[i]**2)))
+		# 	self.flux_err_lo.append(np.sqrt((np.subtract(flux[i], f_lo[i])**2) + (int_err[i]**2) + (int_err_lo[i]**2)))
 
 		return self.flux, (self.flux_err_up, self.flux_err_lo)
 
-	def plot_results(self, corner_plot=False):
+	def plot_results(self, name=None, corner_plot=False, flux_factor=-16):
 		wl_sol, dat, disp = self.args
 
 		sol    = [i[0] for i in self.mc_results]
 		up_lim = [i[1] for i in self.mc_results]
 		lo_lim = [i[2] for i in self.mc_results]
 
+		#print sol
+
 		up_lim_theta = np.add(sol,up_lim)
 		lo_lim_theta = np.subtract(sol,lo_lim)
 
 		if corner_plot:
-			fig = corner.corner(self.flat_samples, labels=["$z$", "$simga$", "$inten1$", "$inten2$"], truths=sol, figsize=(5, 5))
-			plt.pause(0.01)
-			plt.close()
 
-		else:
-			fig, ax = plt.subplots(figsize=(13, 8))
+			if self.line_ID == 'OII_doub':
+				labels_lis = ["$z$", "$simga$", "$[OII] \lambda 3726 intensity$", "[OII] \lambda 3729 $intensity$", "$continuum slope$", "$continuum y-intercept$"]
+			if self.line_ID == 'NeIII':
+				labels_lis = ["$z$", "$simga$", "$[NeIII] \lambda 3869 intensity$", "$continuum slope$", "$continuum y-intercept$"]
+			if self.line_ID == 'OIII_Hb_trip':
+				labels_lis = ["$z$", "$simga$", "$H\beta intensity$", "[OIII] \lambda 5007 $intensity$", "$continuum slope$", "$continuum y-intercept$"]
 
-			if self.abs_params[0] == 0.0:
-				for rand_theta in self.flat_samples[np.random.randint(len(self.flat_samples), size=100)]:
-					plt.plot(wl_sol, self.model(wl_sol, theta=rand_theta), color='grey', alpha=0.25)
-				plt.plot(wl_sol, dat)
-				plt.plot(wl_sol, self.model(wl_sol, theta = sol), color='red')
-				plt.plot(wl_sol, self.model(wl_sol, theta = up_lim_theta), color='red', ls=':')
-				plt.plot(wl_sol, self.model(wl_sol, theta = lo_lim_theta), color='red', ls=':')
-			else:
-				for rand_theta in self.flat_samples[np.random.randint(len(self.flat_samples), size=100)]:
-					plt.plot(wl_sol, self.model(wl_sol, rand_theta, self.abs_params), color='grey', alpha=0.25)
-				plt.plot(wl_sol, dat)
-				plt.plot(wl_sol, self.model(wl_sol, sol, self.abs_params), color='red')
-				plt.plot(wl_sol, self.model(wl_sol, up_lim_theta, self.abs_params), color='red', ls=':')
-				plt.plot(wl_sol, self.model(wl_sol, lo_lim_theta, self.abs_params), color='red', ls=':')
-
-			print str(round(self.flux[0],2)), str(round(self.flux_err_up[0],2)), str(round(self.flux_err_lo[0],2))
-
-			res_dict = {'flux': str(round(self.flux[0],2)), 'up_err':str(round(self.flux_err_up[0],2)), 'lo_err':str(round(self.flux_err_lo[0],2))}
-			plt.text(0.05,0.82, 'flux '+str(self.lines[0])+': {flux}  +{up_err} -{lo_err}'.format(**res_dict), 
-				transform = ax.transAxes, color='navy',size='medium', bbox=dict(facecolor='none', edgecolor='navy', pad=10.0))
-			if len(sol)>3:
-				res_dict = {'flux': str(round(self.flux[1],2)), 'up_err':str(round(self.flux_err_up[1],2)), 'lo_err':str(round(self.flux_err_lo[1],2))}
-				plt.text(0.05,0.72, 'flux '+str(self.lines[1])+': {flux}  +{up_err} -{lo_err}'.format(**res_dict), 
-					transform = ax.transAxes, color='navy',size='medium', bbox=dict(facecolor='none', edgecolor='navy', pad=10.0))
-
-			#Set plot labels
-			plt.title('Spectrum Fit: '+str(self.num))
-			plt.ylabel('Flux (ergs/s/cm^2/A)')
-			plt.xlabel('Wavelength (A)')
-
-			#sets plotting speed and closes the plot before opening a new one
-			plt.pause(0.01)
-			plt.close()
+			fig = corner.corner(self.flat_samples, labels=labels_lis, truths=sol, figsize=(1, 1))
+			#plt.pause(0.01)
+			#plt.close()
+			plt.savefig('/Users/Briana/Documents/Grad_School/HPS/Paper_Plots/LRS2_line_fits/ELF_orange_cornerplot.png')
 			#plt.show()
 
-	def write_results(self, df):
+
+
+		else:
+			fig, ax = plt.subplots()
+			fig.set_size_inches(20,9)
+
+			#print '\n'
+			#print 'len flux ', self.flux
+
+			finer_wl_sol = np.linspace(np.amin(wl_sol), np.amax(wl_sol), num=len(wl_sol)*5)
+			for rand_theta in self.flat_samples[np.random.randint(len(self.flat_samples), size=300)]:
+				ax.plot(finer_wl_sol, self.model(finer_wl_sol, theta=rand_theta), color='grey', alpha=0.25)
+			ax.plot(wl_sol, dat)
+			ax.plot(finer_wl_sol, self.model(finer_wl_sol, theta = sol), color='red')
+			#plt.plot(wl_sol, self.model(wl_sol, theta = up_lim_theta), color='red', ls=':')
+			#plt.plot(wl_sol, self.model(wl_sol, theta = lo_lim_theta), color='red', ls=':')
+
+			if self.line_ID == 'OIII_Hb_trip':
+				y_vals = np.linspace(np.min(dat), np.amax(dat)+0.5, 50)
+				ax.fill_betweenx(y_vals, np.zeros(50)+5566, np.zeros(50)+5590, color='grey', alpha=0.4, zorder=1000)
+        
+
+			res_dict = {'flux': '{'+str(round(self.flux[0],2))+'}', 'up_err':'{+'+str(round(self.flux_err_up[0],2))+'}', 'lo_err':'{-'+str(round(self.flux_err_lo[0],2))+'}'}
+			sca_dict = {'scale':flux_factor}
+			x_pos, y_pos = (0.51, 0.86) #(0.05, 0.86), (0.51, 0.86)
+			ax.text(x_pos, y_pos, str(self.lines[0])+r' Flux: (${flux}^{up_err}_{lo_err}$)'.format(**res_dict)+r'$x10^{-17}$',
+				transform = ax.transAxes, color='black', alpha=0.8, weight='bold', size=30, bbox=dict(facecolor='whitesmoke', edgecolor='darkgrey', pad=10.0), zorder=2000)
+
+			if (self.line_ID != 'NeIII') and (self.line_ID != 'OII'):
+				res_dict = {'flux': '{'+str(round(self.flux[1],2))+'}', 'up_err':'{+'+str(round(self.flux_err_up[1],2))+'}', 'lo_err':'{-'+str(round(self.flux_err_lo[1],2))+'}'}
+				x_pos2, y_pos2 = (0.51, 0.68) #(0.05, 0.68), (0.51, 0.68) 
+				ax.text(x_pos2, y_pos2, str(self.lines[1])+r' Flux: (${flux}^{up_err}_{lo_err}$)'.format(**res_dict)+r'$x10^{-17}$', 
+					transform = ax.transAxes, color='black', alpha=0.8, weight='bold', size=30, bbox=dict(facecolor='whitesmoke', edgecolor='darkgrey', pad=10.0), zorder=2001)
+
+			ax.set_ylabel(r'$Flux\ (ergs/s/cm^2/\AA)\ (x{10}^{-17})$', weight='bold', fontsize=45)
+			ax.set_xlabel(r'$Wavelength\ (\AA)$', weight='bold', fontsize=45)
+			plt.tick_params(axis='both', which='major', labelsize=45)
+			ax.set_ylim(-0.2, 1.0)
+
+			#Set plot labels
+			if name == None:
+				ax.set_title('Spectrum Fit: '+str(self.num), weight='bold', fontsize=45)
+			else:
+				#plt.title('Spectrum Fit: '+str(name), fontsize=20)
+				print('saving plot')
+				plt.savefig('/Users/Briana/Documents/Grad_School/HPS/Paper_Plots/ELF_'+name+'.pdf', bbox_inches='tight')	
+
+			#sets plotting speed and closes the plot before opening a new one
+			#plt.pause(0.01)
+			#plt.close()
+			#plt.show()
+
+	def write_results(self, df, ind):
 		for l in range(len(self.lines)):
-			#print df[self.lines[l]]
-			#df[self.lines[l]][self.num] = np.round(self.flux[l],3)
-			#df[self.lines[l]+'_e'][self.num] = [np.round(self.flux_err_up[l],3), np.round(self.flux_err_lo[l],3)]
 			col   = self.lines[l]
 			col_e = self.lines[l]+'_e'
-			row   = self.num
+			row   = ind
 			val   = np.round(self.flux[l],3)
-			val_e = [np.round(self.flux_err_up[l],3), np.round(self.flux_err_lo[l],3)]
+			val_e = str([np.round(self.flux_err_up[l],3), np.round(self.flux_err_lo[l],3)])
 
-			print row, col, col_e, val, val_e
-
-			df.set_value(row, col, val)
-			df.set_value(row, col_e, val_e)
+			df.at[row, col] = val
+			df.at[row, col_e] = val_e
 		return df
 
 
