@@ -152,7 +152,7 @@ class MCMC_functions():
 			fig = corner.corner(self.flat_samples, labels=labels_lis, truths=sol, figsize=(1, 1))
 			#plt.pause(0.01)
 			#plt.close()
-			plt.savefig('/Users/Briana/Documents/Grad_School/HPS/Paper_Plots/LRS2_line_fits/ELF_orange_cornerplot.png')
+			plt.savefig(name+'_cornerplot.png')
 			#plt.show()
 
 
@@ -183,7 +183,7 @@ class MCMC_functions():
 			ax.text(x_pos, y_pos, str(self.lines[0])+r' Flux: (${flux}^{up_err}_{lo_err}$)'.format(**res_dict)+r'$x10^{-17}$',
 				transform = ax.transAxes, color='black', alpha=0.8, weight='bold', size=30, bbox=dict(facecolor='whitesmoke', edgecolor='darkgrey', pad=10.0), zorder=2000)
 
-			if (self.line_ID != 'NeIII') and (self.line_ID != 'OII'):
+			if (self.line_ID != 'NeIII') and (self.line_ID != 'OII') and (self.line_ID != 'OIII_Te') and (self.line_ID != 'OI'):
 				res_dict = {'flux': '{'+str(round(self.flux[1],2))+'}', 'up_err':'{+'+str(round(self.flux_err_up[1],2))+'}', 'lo_err':'{-'+str(round(self.flux_err_lo[1],2))+'}'}
 				x_pos2, y_pos2 = (0.51, 0.68) #(0.05, 0.68), (0.51, 0.68) 
 				ax.text(x_pos2, y_pos2, str(self.lines[1])+r' Flux: (${flux}^{up_err}_{lo_err}$)'.format(**res_dict)+r'$x10^{-17}$', 
@@ -197,15 +197,16 @@ class MCMC_functions():
 			#Set plot labels
 			if name == None:
 				ax.set_title('Spectrum Fit: '+str(self.num), weight='bold', fontsize=45)
+				#sets plotting speed and closes the plot before opening a new one
+				plt.show()
+				plt.pause(0.01)
+				plt.close()
+
 			else:
 				#plt.title('Spectrum Fit: '+str(name), fontsize=20)
 				print('saving plot')
-				plt.savefig('/Users/Briana/Documents/Grad_School/HPS/Paper_Plots/ELF_'+name+'.pdf', bbox_inches='tight')	
-
-			#sets plotting speed and closes the plot before opening a new one
-			#plt.pause(0.01)
-			#plt.close()
-			#plt.show()
+				plt.savefig(name+'.pdf', bbox_inches='tight')	
+				plt.close()
 
 	def write_results(self, df, ind):
 		for l in range(len(self.lines)):
