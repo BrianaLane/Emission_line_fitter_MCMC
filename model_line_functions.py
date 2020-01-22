@@ -15,6 +15,11 @@ def OII_gaussian(x, theta):
 	mu = 3727*(1+z)
 	return inten * (np.exp(-0.5*np.power(x - mu, 2.) / (np.power(sig, 2.))))
 
+def OIII_Te_gaussian(x, theta):
+	z, sig, inten = theta
+	mu = 4363*(1+z)
+	return inten * (np.exp(-0.5*np.power(x - mu, 2.) / (np.power(sig, 2.))))
+
 def Hb_gaussian(x, theta):
 	z, sig, inten = theta
 	mu = 4861*(1+z)
@@ -83,6 +88,11 @@ def OII_gaussian_cont(x, theta):
 	mu = 3727*(1+z)
 	return ((m*x)+b) + inten * (np.exp(-0.5*np.power(x - mu, 2.) / (np.power(sig, 2.))))
 
+def OIII_Te_gaussian_cont(x, theta):
+	z, sig, inten, m, b = theta
+	mu = 4363*(1+z)
+	return ((m*x)+b) + inten * (np.exp(-0.5*np.power(x - mu, 2.) / (np.power(sig, 2.))))
+
 def Hb_gaussian_cont(x, theta):
 	z, sig, inten, m, b = theta
 	mu = 4861*(1+z)
@@ -141,8 +151,9 @@ def NII_Ha_trip_gaussian_cont(x, theta):
 # Trim Spec Function #
 #********************#
 
-line_dict = {'OI':				{'mod':OI_gaussian,				'cont_mod':OI_gaussian_cont,				'lines':['[OI]6300'],				'trim':(6370.0, 6330.0)},
+line_dict = {'OI':				{'mod':OI_gaussian,				'cont_mod':OI_gaussian_cont,				'lines':['[OI]6300'],				'trim':(6270.0, 6330.0)},
 			'OII':				{'mod':OII_gaussian,			'cont_mod':OII_gaussian_cont,				'lines':['[OII]3727'],				'trim':(3700.0, 3760.0)},
+			'OIII_Te':			{'mod':OIII_Te_gaussian,		'cont_mod':OIII_Te_gaussian_cont,			'lines':['[OIII]4363'],				'trim':(4330.0, 4390.0)},
 			'Hb':				{'mod':Hb_gaussian,				'cont_mod':Hb_gaussian_cont,				'lines':['[Hb]4861'],				'trim':(4830.0, 4890.0)},
 			'NeIII':			{'mod':NeIII_gaussian,			'cont_mod':NeIII_gaussian_cont,				'lines':['[NeIII]3870'],			'trim':(3840.0, 3900.0)},
 			'OII_doub':			{'mod':OII_doub_gaussian,		'cont_mod':OII_doub_gaussian_cont,			'lines':['[OII]3726','[OII]3729'],	'trim':(3700.0, 3760.0)},
