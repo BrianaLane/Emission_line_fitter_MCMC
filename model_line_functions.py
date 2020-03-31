@@ -152,15 +152,15 @@ def NII_Ha_trip_gaussian_cont(x, theta):
 #********************#
 
 line_dict = {'OI':				{'mod':OI_gaussian,				'cont_mod':OI_gaussian_cont,				'lines':['[OI]6300'],				'trim':(6270.0, 6330.0)},
-			'OII':				{'mod':OII_gaussian,			'cont_mod':OII_gaussian_cont,				'lines':['[OII]3727'],				'trim':(3700.0, 3760.0)},
+			'OII':				{'mod':OII_gaussian,			'cont_mod':OII_gaussian_cont,				'lines':['[OII]3727'],				'trim':(3700.0, 3780.0)},
 			'OIII_Te':			{'mod':OIII_Te_gaussian,		'cont_mod':OIII_Te_gaussian_cont,			'lines':['[OIII]4363'],				'trim':(4330.0, 4390.0)},
 			'Hb':				{'mod':Hb_gaussian,				'cont_mod':Hb_gaussian_cont,				'lines':['[Hb]4861'],				'trim':(4830.0, 4890.0)},
 			'NeIII':			{'mod':NeIII_gaussian,			'cont_mod':NeIII_gaussian_cont,				'lines':['[NeIII]3870'],			'trim':(3840.0, 3900.0)},
 			'OII_doub':			{'mod':OII_doub_gaussian,		'cont_mod':OII_doub_gaussian_cont,			'lines':['[OII]3726','[OII]3729'],	'trim':(3700.0, 3760.0)},
 			'OIII_doub':		{'mod':OIII_doub_gaussian,		'cont_mod':OIII_doub_gaussian_cont,			'lines':['[OIII]5007'],				'trim':(4930.0, 5050.0)},
-			'SII_doub':			{'mod':SII_doub_gaussian,		'cont_mod':SII_doub_gaussian_cont,			'lines':['[SII]6731','[SII]6717'],	'trim':(6700.0, 6750.0)},
-			'OIII_Hb_trip':		{'mod':OIII_Hb_trip_gaussian,	'cont_mod':OIII_Hb_trip_gaussian_cont,		'lines':['[OIII]5007','[Hb]4861'],	'trim':(4830.0, 5050.0)},
-			'NII_Ha_trip':		{'mod':NII_Ha_trip_gaussian,	'cont_mod':NII_Ha_trip_gaussian_cont,		'lines':['[NII]6583','[Ha]6562'],	'trim':(6520.0, 6610.0)}}
+			'SII_doub':			{'mod':SII_doub_gaussian,		'cont_mod':SII_doub_gaussian_cont,			'lines':['[SII]6731','[SII]6717'],	'trim':(6680.0, 6780.0)},
+			'OIII_Hb_trip':		{'mod':OIII_Hb_trip_gaussian,	'cont_mod':OIII_Hb_trip_gaussian_cont,		'lines':['[OIII]5007','[Hb]4861'],	'trim':(4800.0, 5100.0)},
+			'NII_Ha_trip':		{'mod':NII_Ha_trip_gaussian,	'cont_mod':NII_Ha_trip_gaussian_cont,		'lines':['[NII]6583','[Ha]6562'],	'trim':(6500.0, 6630.0)}}
 
 def trim_spec_for_model(line, dat, residuals, wl, z):
 	min_wave = line_dict[line]['trim'][0]*(1+z)
