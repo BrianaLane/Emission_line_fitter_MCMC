@@ -25,8 +25,8 @@ wave_B = np.load(master_spec_path+'WavelengthSolu_M82_B.npy')
 
 master_df = pd.read_csv(master_spec_path+'M82_dataframe_master.csv', low_memory=False)
 
-master_df['[Hb]4861_test'] = np.zeros(len(master_df['[Hb]4861']))
-master_df['[Hb]4861_e_test'] = np.zeros(len(master_df['[Hb]4861']))
+master_df['[Hb]4861'] = np.zeros(len(master_df['[Hb]4861']))
+master_df['[Hb]4861_e'] = np.zeros(len(master_df['[Hb]4861']))
 
 df_B = master_df[(master_df['chan']== 'B') & (master_df['field'] != 'F4b')].reset_index()
 df_R = master_df[master_df['chan']== 'R'].reset_index()
