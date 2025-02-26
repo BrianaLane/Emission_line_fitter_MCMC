@@ -17,7 +17,7 @@ class MCMC_functions():
 		self.args         = args
 		self.fit_cont     = fit_cont
 		self.lines        = mlf.line_dict[self.line_ID]['lines']
-		self.wl_lines     = [int(st.split(w, ']')[1]) for w in self.lines]
+		self.wl_lines     = [int(w.split(']')[1]) for w in self.lines]
 
 		if self.fit_cont:
 			self.model    = mlf.line_dict[self.line_ID]['cont_mod']
@@ -69,21 +69,22 @@ class MCMC_functions():
 		pos = [thetaGuess + 1e-4*np.random.randn(ndim) for i in range(nwalkers)]
 		sampler = emcee.EnsembleSampler(nwalkers, ndim, self.lnprob, args=self.args, a=1)
 
-		#print "Burning in ..."
+		print("Burning in ...")
 		pos, prob, state = sampler.run_mcmc(pos, nchains[0])
 
 		sampler.reset()
 
-		#print "Running MCMC ..."
+		print( "Running MCMC ...")
 		pos, prob, state = sampler.run_mcmc(pos, nchains[0], rstate0=state)
 
 		self.flat_samples = sampler.flatchain
 		samples = sampler.chain[:, :, :].reshape((-1, ndim))
-		mc_results = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
+		print('SAMPLES:', np.shape(samples))
+		mc_results = list(map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0))))
 
 		self.mc_results = mc_results
 
-		#print 'MC RESULTS: ',mc_results 
+		print( 'MC RESULTS: ',mc_results) 
 
 		return self.flat_samples, mc_results
 
@@ -98,16 +99,16 @@ class MCMC_functions():
 		#tot_flux_err= []
 
 		I= model_vals[2] * model_vals[1] * np.sqrt(2*np.pi)
-		#print 'Flux: ', model_vals[2], model_vals[1], I
+		print( 'Flux: ', model_vals[2], model_vals[1], I)
 		tot_flux.append(I)
 
 		#if (len(model_vals) == 4) or (len(model_vals) == 6):
 		if self.line_ID != 'NeIII':
 			I2 = model_vals[3] * model_vals[1] * np.sqrt(2*np.pi)
-			#print 'Flux: ', model_vals[3], model_vals[1], I2
+			print( 'Flux: ', model_vals[3], model_vals[1], I2)
 			tot_flux.append(I2)
 
-		#print tot_flux
+		print( tot_flux)
 		return tot_flux
 
 	def calculate_flux(self):
@@ -135,7 +136,7 @@ class MCMC_functions():
 		up_lim = [i[1] for i in self.mc_results]
 		lo_lim = [i[2] for i in self.mc_results]
 
-		#print sol
+		print( sol)
 
 		up_lim_theta = np.add(sol,up_lim)
 		lo_lim_theta = np.subtract(sol,lo_lim)
@@ -216,6 +217,7 @@ class MCMC_functions():
 			val   = np.round(self.flux[l],3)
 			val_e = str([np.round(self.flux_err_up[l],3), np.round(self.flux_err_lo[l],3)])
 
+			print('WRITE to DF')
 			df.at[row, col] = val
 			df.at[row, col_e] = val_e
 		return df
